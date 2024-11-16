@@ -70,25 +70,32 @@ class Simulator(object):
 
     # Displays the contents of the given cache as nicely-formatted table
     def display_cache(self, cache, table_width):
-
-        table = Table(num_cols=len(cache), width=table_width, alignment="center")
-        table.title = "Cache"
-
         cache_set_names = sorted(cache.keys())
-        # A cache containing only one set is considered a fully associative
-        # cache
-        if len(cache) != 1:
-            # Display set names in table header if cache is not fully
-            # associative
-            table.header[:] = cache_set_names
+        num_sets = len(cache_set_names)
+        num_cols = num_sets if num_sets > 1 else 1
 
-        # Add to table the cache entries for each block
-        table.rows.append([])
-        for index in cache_set_names:
-            blocks = cache[index]
-            table.rows[0].append(
-                " ".join(",".join(map(str, entry["data"])) for entry in blocks)
-            )
+        table = Table(num_cols=num_cols, width=table_width, alignment="center")
+        table.title = "L2 Cache" if cache.is_l2 else "L1 Cache"
+
+        # Display set names in table header if cache is not fully associative
+        if num_sets > 1:
+            table.header[:] = cache_set_names
+        else:
+            table.header[:] = ["Set"]
+
+        # Find the maximum number of blocks in any set
+        max_blocks = max(len(cache[index]) for index in cache_set_names)
+        # Add rows for each block position
+        for i in range(max_blocks):
+            row = []
+            for index in cache_set_names:
+                blocks = cache[index]
+                if i < len(blocks):
+                    block_data = ",".join(map(str, blocks[i]["data"]))
+                    row.append(block_data)
+                else:
+                    row.append("")
+            table.rows.append(row)
 
         print(table)
 
@@ -118,10 +125,11 @@ class Simulator(object):
             word_addrs, num_addr_bits, num_offset_bits, num_index_bits, num_tag_bits
         )
 
-        cache = Cache(num_sets=num_sets, num_index_bits=num_index_bits)
+        l1_cache = Cache(num_sets=num_sets, num_index_bits=num_index_bits)
+        l2_cache = Cache(num_sets=num_sets, num_index_bits=num_index_bits, is_l2=True)
 
-        cache.read_refs(
-            num_blocks_per_set, num_words_per_block, replacement_policy, refs
+        l1_cache.read_refs(
+            num_blocks_per_set, num_words_per_block, replacement_policy, refs, l2_cache
         )
 
         # The character-width of all displayed tables
@@ -136,5 +144,7 @@ class Simulator(object):
         print()
         self.display_addr_refs(refs, table_width)
         print()
-        self.display_cache(cache, table_width)
+        self.display_cache(l1_cache, table_width)
+        print()
+        self.display_cache(l2_cache, table_width)
         print()

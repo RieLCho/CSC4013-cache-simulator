@@ -7,11 +7,12 @@ from word_addr import WordAddress
 class Cache(dict):
 
     # Initializes the reference cache with a fixed number of sets
-    def __init__(self, cache=None, num_sets=None, num_index_bits=0):
+    def __init__(self, cache=None, num_sets=None, num_index_bits=0, is_l2=False):
 
         # A list of recently ordered addresses, ordered from least-recently
         # used to most
         self.recently_used_addrs = []
+        self.is_l2 = is_l2
 
         if cache is not None:
             self.update(cache)
@@ -64,7 +65,7 @@ class Cache(dict):
                     return
 
     # Adds the given entry to the cache at the given index
-    def set_block(self, replacement_policy, num_blocks_per_set, addr_index, new_entry):
+    def set_block(self, replacement_policy, num_blocks_per_set, addr_index, new_entry, l2_cache=None):
         # Place all cache entries in a single set if cache is fully associative
         if addr_index is None:
             blocks = self["0"]
@@ -72,21 +73,24 @@ class Cache(dict):
             blocks = self[addr_index]
         # Replace MRU or LRU entry if number of blocks in set exceeds the limit
         if len(blocks) == num_blocks_per_set:
-            self.replace_block(blocks, replacement_policy, addr_index, new_entry)
-        else:
-            blocks.append(new_entry)
+            evicted_entry = blocks.pop(0)
+            # L1 캐시에서 퇴출된 블록을 L2 캐시에 추가
+            if l2_cache and not self.is_l2:
+                l2_cache.set_block(
+                    replacement_policy=replacement_policy,
+                    num_blocks_per_set=num_blocks_per_set,
+                    addr_index=evicted_entry["index"],
+                    new_entry=evicted_entry
+                )
+        blocks.append(new_entry)
 
     # Simulate the cache by reading the given address references into it
     def read_refs(
-        self, num_blocks_per_set, num_words_per_block, replacement_policy, refs
+        self, num_blocks_per_set, num_words_per_block, replacement_policy, refs, l2_cache=None
     ):
-
         for ref in refs:
             self.mark_ref_as_last_seen(ref)
-
-            # Record if the reference is already in the cache or not
             if self.is_hit(ref.index, ref.tag):
-                # Give emphasis to hits in contrast to misses
                 ref.cache_status = ReferenceCacheStatus.hit
             else:
                 ref.cache_status = ReferenceCacheStatus.miss
@@ -95,4 +99,23 @@ class Cache(dict):
                     num_blocks_per_set=num_blocks_per_set,
                     addr_index=ref.index,
                     new_entry=ref.get_cache_entry(num_words_per_block),
+                    l2_cache=l2_cache,
                 )
+                if l2_cache and not l2_cache.is_hit(ref.index, ref.tag):
+                    l2_cache.set_block(
+                        replacement_policy=replacement_policy,
+                        num_blocks_per_set=num_blocks_per_set,
+                        addr_index=ref.index,
+                        new_entry=ref.get_cache_entry(num_words_per_block),
+                    )
+
+    # Add a method to retrieve a block from the cache
+    def get_block(self, addr_index, addr_tag):
+        if addr_index in self:
+            blocks = self[addr_index]
+            for block in blocks:
+                if block["tag"] == addr_tag:
+                    return block
+        return None
+
+

@@ -32,6 +32,7 @@ class Reference(object):
         return {
             "tag": self.tag,
             "data": self.word_addr.get_consecutive_words(num_words_per_block),
+            "index": self.index,
         }
 
 

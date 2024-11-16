@@ -30,11 +30,12 @@ class Table(object):
             table_strs.append(self.get_separator())
 
         # Format string used to align columns
+        cell_width = self.width // self.num_cols
         cell_format_str = "".join(
             "{{:{}{}}}".format(
-                Table.alignment_symbols[self.alignment], self.width // self.num_cols
+                Table.alignment_symbols[self.alignment], cell_width
             )
-            for i in range(self.num_cols)
+            for _ in range(self.num_cols)
         )
 
         if self.header:
@@ -42,6 +43,9 @@ class Table(object):
             table_strs.append(self.get_separator())
 
         for row in self.rows:
+            # Ensure the row has the correct number of columns
+            if len(row) < self.num_cols:
+                row = list(row) + [""] * (self.num_cols - len(row))
             table_strs.append(cell_format_str.format(*map(str, row)))
 
         return "\n".join(table_strs)
