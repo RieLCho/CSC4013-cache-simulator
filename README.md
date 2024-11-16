@@ -1,96 +1,94 @@
-# Cache Simulator
+# Cache Simulator 개선
 
-*Copyright 2015-2024 Caleb Evans*  
-*Released under the MIT license*
-
-[![tests](https://github.com/caleb531/cache-simulator/actions/workflows/tests.yml/badge.svg)](https://github.com/caleb531/cache-simulator/actions/workflows/tests.yml)
-[![Coverage Status](https://coveralls.io/repos/caleb531/cache-simulator/badge.svg)](https://coveralls.io/r/caleb531/cache-simulator?branch=main)
-
-This program simulates a processor cache for the MIPS instruction set
-architecture. It can simulate all three fundamental caching schemes:
-direct-mapped, *n*-way set associative, and fully associative.
-
-The program must be run from the command line and requires Python 3.4+ to run.
-Executing the program will run the simulation and print an ASCII table
-containing the details for each supplied word address, as well as the final
-contents of the cache.
-
-For example, the following command simulates a 3-way set associative LRU cache,
-with 2 words per block. To see all examples and their respective outputs, see
-[examples.txt](examples.txt).
-
-```sh
-# 3-way set associative (LRU; 2 words per block)
-cache-simulator --cache-size 24 --num-blocks-per-set 3 --num-words-per-block 2 --word-addrs 3 180 43 2 191 88 190 14 181 44 186 253
-```
-
-This produces the following output:
+-   Original repo: https://github.com/caleb531/cache-simulator
+-   동국대학교 컴퓨터공학과 컴퓨터구조 수업 (CSC4013) 과제를 위해 수정하였습니다.
 
 ```
-     WordAddr      BinAddr          Tag        Index       Offset     Hit/Miss
---------------------------------------------------------------------------------
-            3    0000 0011        00000           01            1         miss
-          180    1011 0100        10110           10            0         miss
-           43    0010 1011        00101           01            1         miss
-            2    0000 0010        00000           01            0          HIT
-          191    1011 1111        10111           11            1         miss
-           88    0101 1000        01011           00            0         miss
-          190    1011 1110        10111           11            0          HIT
-           14    0000 1110        00001           11            0         miss
-          181    1011 0101        10110           10            1          HIT
-           44    0010 1100        00101           10            0         miss
-          186    1011 1010        10111           01            0         miss
-          253    1111 1101        11111           10            1         miss
+yangjin@Ryzen-5600X:~/projects/cache-simulator/cachesimulator$ python3 __main__.py
+Running simulation with L1 and L2 caches...
+              WordAddr               BinAddr                   Tag                 Index                Offset              Hit/Miss
+------------------------------------------------------------------------------------------------------------------------------------
+                     1             0000 0001               000 000                     0                     1                  miss
+                     2             0000 0010               000 000                     1                     0                  miss
+                     3             0000 0011               000 000                     1                     1                   HIT
+                     4             0000 0100               000 001                     0                     0                  miss
+                     1             0000 0001               000 000                     0                     1                   HIT
+                     2             0000 0010               000 000                     1                     0                   HIT
+                     3             0000 0011               000 000                     1                     1                   HIT
+                     4             0000 0100               000 001                     0                     0                   HIT
+                    10             0000 1010               000 010                     1                     0                  miss
+                    11             0000 1011               000 010                     1                     1                   HIT
+                    12             0000 1100               000 011                     0                     0                  miss
+                     1             0000 0001               000 000                     0                     1                   HIT
+                     2             0000 0010               000 000                     1                     0                   HIT
+                     3             0000 0011               000 000                     1                     1                   HIT
+                     4             0000 0100               000 001                     0                     0                  miss
 
-                                     Cache
---------------------------------------------------------------------------------
-         00                  01                  10                  11
---------------------------------------------------------------------------------
-       88,89         2,3 42,43 186,187  180,181 44,45 252,253   190,191 14,15
+                                                              L1 Cache
+------------------------------------------------------------------------------------------------------------------------------------
+                                0                                                                 1
+------------------------------------------------------------------------------------------------------------------------------------
+                               0,1                                                               2,3
+                               4,5                                                              10,11
+
+                                                              L2 Cache
+------------------------------------------------------------------------------------------------------------------------------------
+                                0                                                                 1
+------------------------------------------------------------------------------------------------------------------------------------
+                               4,5                                                               2,3
+                              12,13                                                             10,11
+
+Total Cycles with L2: 618
+
+Running simulation with L1 cache only...
+              WordAddr               BinAddr                   Tag                 Index                Offset              Hit/Miss
+------------------------------------------------------------------------------------------------------------------------------------
+                     1             0000 0001               000 000                     0                     1                  miss
+                     2             0000 0010               000 000                     1                     0                  miss
+                     3             0000 0011               000 000                     1                     1                   HIT
+                     4             0000 0100               000 001                     0                     0                  miss
+                     1             0000 0001               000 000                     0                     1                   HIT
+                     2             0000 0010               000 000                     1                     0                   HIT
+                     3             0000 0011               000 000                     1                     1                   HIT
+                     4             0000 0100               000 001                     0                     0                   HIT
+                    10             0000 1010               000 010                     1                     0                  miss
+                    11             0000 1011               000 010                     1                     1                   HIT
+                    12             0000 1100               000 011                     0                     0                  miss
+                     1             0000 0001               000 000                     0                     1                  miss
+                     2             0000 0010               000 000                     1                     0                   HIT
+                     3             0000 0011               000 000                     1                     1                   HIT
+                     4             0000 0100               000 001                     0                     0                  miss
+
+                                                              L1 Cache
+------------------------------------------------------------------------------------------------------------------------------------
+                                0                                                                 1
+------------------------------------------------------------------------------------------------------------------------------------
+                               0,1                                                               2,3
+                               4,5                                                              10,11
+
+Total Cycles with L1 only: 708
+
+Comparison of total cycles:
+Total Cycles with L2: 618
+Total Cycles with L1 only: 708
 ```
 
-## Installing
+## 시뮬레이션 설정
 
-You can install Cache Simulator via pip (ideally globally):
+캐시 크기: 8 words
+세트당 블록 수: 2
+블록당 워드 수: 2
+교체 정책: LRU
+주소 비트 수: 8
 
-```
-pip install cache-simulator
-```
+사이클 비용:
+L1 히트: 1 사이클
+L2 히트: 10 사이클
+미스: 100 사이클
 
-## Command-line parameters
+## 결과 분석
 
-### Required parameters
-
-#### --cache-size
-
-The size of the cache in words (recall that one word is four bytes in MIPS).
-
-#### --word-addrs
-
-One or more word addresses (separated by spaces), where each word address is a
-base-10 positive integer.
-
-### Optional parameters
-
-#### --num-blocks-per-set
-
-The program internally represents all cache schemes using a set associative
-cache. A value of `1` for this parameter (the default) implies a direct-mapped
-cache. A value other than `1` implies either a set associative *or* fully
-associative cache.
-
-#### --num-words-per-block
-
-The number of words to store for each block in the cache; the default value is `1`.
-
-#### --num-addr-bits
-
-The number of bits used to represent each given word address; this value is
-reflected in the *BinAddr* column in the reference table. If omitted, the
-default value is the number of bits needed to represent the largest of the given
-word addresses.
-
-#### --replacement-policy
-
-The replacement policy to use for the cache. Accepted values are `lru` (Least
-Recently Used; the default) and `mru` (Most Recently Used).
+-   L1+L2 캐시의 경우 (618 사이클):미스 (6번): 6 × 100 = 600 + 히트 (9번): 9 × 1 = 9 + L2 히트 (1번): 1 × 10 = 10
+    총합: 600 + 9 + 10 = 618 사이클
+-   L1 캐시만 사용한 경우 (708 사이클):미스 (7번): 7 × 100 = 700 + 히트 (8번): 8 × 1 = 8
+    총합: 700 + 8 = 708 사이클
