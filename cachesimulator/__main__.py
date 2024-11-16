@@ -53,11 +53,23 @@ def parse_cli_args():
 
 
 def main():
-
-    cli_args = parse_cli_args()
+    # 지역성을 보여주는 예제 워크로드
+    example_workload = [
+        1, 2, 3, 4,  # 순차적 접근
+        1, 2, 3, 4,  # 같은 데이터 재접근
+        10, 11, 12,  # 다른 영역 접근
+        1, 2, 3, 4   # 다시 처음 데이터로 돌아옴
+    ]
+    
     sim = Simulator()
-    sim.run_simulation(**vars(cli_args))
-
+    sim.run_simulation(
+        cache_size=8,
+        num_blocks_per_set=2,
+        num_words_per_block=2,
+        replacement_policy="lru",
+        num_addr_bits=8,
+        word_addrs=example_workload
+    )
 
 if __name__ == "__main__":
     main()

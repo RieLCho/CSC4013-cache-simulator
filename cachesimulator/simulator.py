@@ -127,7 +127,7 @@ class Simulator(object):
         l1_cache = Cache(num_sets=num_sets, num_index_bits=num_index_bits)
         l2_cache = Cache(num_sets=num_sets, num_index_bits=num_index_bits, is_l2=True)
 
-        total_cycles = l1_cache.read_refs(
+        total_cycles_with_l2 = l1_cache.read_refs(
             num_blocks_per_set, num_words_per_block, replacement_policy, refs, l2_cache
         )
 
@@ -140,11 +140,28 @@ class Simulator(object):
             )
         )
 
-        print()
+        print("Running simulation with L1 and L2 caches...")
         self.display_addr_refs(refs, table_width)
         print()
         self.display_cache(l1_cache, table_width)
         print()
         self.display_cache(l2_cache, table_width)
         print()
-        print(f"Total Cycles: {total_cycles}")
+        print(f"Total Cycles with L2: {total_cycles_with_l2}")
+
+        # Run the simulation with L1 cache only
+        l1_cache_only = Cache(num_sets=num_sets, num_index_bits=num_index_bits)
+        total_cycles_with_l1_only = l1_cache_only.read_refs(
+            num_blocks_per_set, num_words_per_block, replacement_policy, refs
+        )
+
+        print("\nRunning simulation with L1 cache only...")
+        self.display_addr_refs(refs, table_width)
+        print()
+        self.display_cache(l1_cache_only, table_width)
+        print()
+        print(f"Total Cycles with L1 only: {total_cycles_with_l1_only}")
+
+        print("\nComparison of total cycles:")
+        print(f"Total Cycles with L2: {total_cycles_with_l2}")
+        print(f"Total Cycles with L1 only: {total_cycles_with_l1_only}")
