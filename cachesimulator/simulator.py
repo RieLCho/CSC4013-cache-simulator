@@ -3,10 +3,10 @@
 import math
 import shutil
 
-from cachesimulator.bin_addr import BinaryAddress
-from cachesimulator.cache import Cache
-from cachesimulator.reference import Reference
-from cachesimulator.table import Table
+from bin_addr import BinaryAddress
+from cache import Cache
+from reference import Reference
+from table import Table
 
 # The names of all reference table columns
 REF_COL_NAMES = ("WordAddr", "BinAddr", "Tag", "Index", "Offset", "Hit/Miss")

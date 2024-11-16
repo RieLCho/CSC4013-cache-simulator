@@ -3,8 +3,8 @@
 from collections import OrderedDict
 from enum import Enum
 
-from cachesimulator.bin_addr import BinaryAddress
-from cachesimulator.word_addr import WordAddress
+from bin_addr import BinaryAddress
+from word_addr import WordAddress
 
 
 # An address reference consisting of the address and all of its components

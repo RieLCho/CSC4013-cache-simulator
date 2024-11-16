@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-
-from cachesimulator.bin_addr import BinaryAddress
-from cachesimulator.reference import ReferenceCacheStatus
-from cachesimulator.word_addr import WordAddress
+from bin_addr import BinaryAddress
+from reference import ReferenceCacheStatus
+from word_addr import WordAddress
 
 
 class Cache(dict):
