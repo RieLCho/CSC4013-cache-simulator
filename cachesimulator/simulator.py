@@ -109,7 +109,6 @@ class Simulator(object):
         num_addr_bits,
         word_addrs,
     ):
-
         num_blocks = cache_size // num_words_per_block
         num_sets = num_blocks // num_blocks_per_set
 
@@ -128,7 +127,7 @@ class Simulator(object):
         l1_cache = Cache(num_sets=num_sets, num_index_bits=num_index_bits)
         l2_cache = Cache(num_sets=num_sets, num_index_bits=num_index_bits, is_l2=True)
 
-        l1_cache.read_refs(
+        total_cycles = l1_cache.read_refs(
             num_blocks_per_set, num_words_per_block, replacement_policy, refs, l2_cache
         )
 
@@ -148,3 +147,4 @@ class Simulator(object):
         print()
         self.display_cache(l2_cache, table_width)
         print()
+        print(f"Total Cycles: {total_cycles}")

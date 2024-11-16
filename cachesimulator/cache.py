@@ -96,45 +96,44 @@ class Cache(dict):
     def read_refs(
         self, num_blocks_per_set, num_words_per_block, replacement_policy, refs, l2_cache=None
     ):
+        total_cycles = 0
         for ref in refs:
             self.mark_ref_as_last_seen(ref)
             if self.is_hit(ref.index, ref.tag):
                 ref.cache_status = ReferenceCacheStatus.hit
+                total_cycles += 1 # 1 cycle for a cache hit
+            elif l2_cache and l2_cache.is_hit(ref.index, ref.tag):
+                ref.cache_status = ReferenceCacheStatus.hit
+                total_cycles += 10 # 10 cycles for an L2 cache hit
+                l2_block = l2_cache.get_block(ref.index, ref.tag)
+                self.set_block(
+                    replacement_policy=replacement_policy,
+                    num_blocks_per_set=num_blocks_per_set,
+                    addr_index=ref.index,
+                    new_entry=l2_block,
+                    l2_cache=None,
+                )
+                l2_cache.remove_block(ref.index, ref.tag)
             else:
-                if l2_cache and l2_cache.is_hit(ref.index, ref.tag):
-                    # L2 캐시에서 히트한 경우
-                    ref.cache_status = ReferenceCacheStatus.hit
-                    # L2 캐시에서 블록을 가져와 L1 캐시에 추가
-                    l2_block = l2_cache.get_block(ref.index, ref.tag)
-                    self.set_block(
-                        replacement_policy=replacement_policy,
-                        num_blocks_per_set=num_blocks_per_set,
-                        addr_index=ref.index,
-                        new_entry=l2_block,
-                        l2_cache=None,
-                    )
-                    # L2 캐시에서 해당 블록 제거 (L1으로 이동)
-                    l2_cache.remove_block(ref.index, ref.tag)
-                else:
-                    # L2 캐시에서도 미스인 경우
-                    ref.cache_status = ReferenceCacheStatus.miss
-                    # 메인 메모리에서 블록을 가져와 L1 및 L2 캐시에 추가
-                    new_entry = ref.get_cache_entry(num_words_per_block)
-                    if l2_cache:
-                        l2_cache.set_block(
-                            replacement_policy=replacement_policy,
-                            num_blocks_per_set=num_blocks_per_set,
-                            addr_index=ref.index,
-                            new_entry=new_entry,
-                            l2_cache=None,  # 재귀 방지
-                        )
-                    self.set_block(
+                ref.cache_status = ReferenceCacheStatus.miss
+                total_cycles += 100 # 100 cycles for a cache miss
+                new_entry = ref.get_cache_entry(num_words_per_block)
+                if l2_cache:
+                    l2_cache.set_block(
                         replacement_policy=replacement_policy,
                         num_blocks_per_set=num_blocks_per_set,
                         addr_index=ref.index,
                         new_entry=new_entry,
-                        l2_cache=l2_cache,
+                        l2_cache=None,
                     )
+                self.set_block(
+                    replacement_policy=replacement_policy,
+                    num_blocks_per_set=num_blocks_per_set,
+                    addr_index=ref.index,
+                    new_entry=new_entry,
+                    l2_cache=l2_cache,
+                )
+        return total_cycles
 
     # Add a method to retrieve a block from the cache
     def get_block(self, addr_index, addr_tag):
