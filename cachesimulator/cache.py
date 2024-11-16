@@ -46,7 +46,7 @@ class Cache(dict):
             return False
 
         for block in blocks:
-            if block["tag"] == addr_tag:
+            if block and block["tag"] == addr_tag:
                 return True
 
         return False
@@ -66,21 +66,29 @@ class Cache(dict):
 
     # Adds the given entry to the cache at the given index
     def set_block(self, replacement_policy, num_blocks_per_set, addr_index, new_entry, l2_cache=None):
+        # Ensure addr_index is not an empty string
+        if not addr_index:
+            addr_index = "0"
         # Place all cache entries in a single set if cache is fully associative
         if addr_index is None:
             blocks = self["0"]
         else:
-            blocks = self[addr_index]
+            blocks = self.setdefault(addr_index, [])
         # Replace MRU or LRU entry if number of blocks in set exceeds the limit
         if len(blocks) == num_blocks_per_set:
-            evicted_entry = blocks.pop(0)
+            # 교체 정책에 따라 블록 교체
+            if replacement_policy == "lru":
+                evicted_entry = blocks.pop(0)
+            elif replacement_policy == "mru":
+                evicted_entry = blocks.pop(-1)
             # L1 캐시에서 퇴출된 블록을 L2 캐시에 추가
             if l2_cache and not self.is_l2:
                 l2_cache.set_block(
                     replacement_policy=replacement_policy,
                     num_blocks_per_set=num_blocks_per_set,
                     addr_index=evicted_entry["index"],
-                    new_entry=evicted_entry
+                    new_entry=evicted_entry,
+                    l2_cache=None,
                 )
         blocks.append(new_entry)
 
@@ -93,20 +101,39 @@ class Cache(dict):
             if self.is_hit(ref.index, ref.tag):
                 ref.cache_status = ReferenceCacheStatus.hit
             else:
-                ref.cache_status = ReferenceCacheStatus.miss
-                self.set_block(
-                    replacement_policy=replacement_policy,
-                    num_blocks_per_set=num_blocks_per_set,
-                    addr_index=ref.index,
-                    new_entry=ref.get_cache_entry(num_words_per_block),
-                    l2_cache=l2_cache,
-                )
-                if l2_cache and not l2_cache.is_hit(ref.index, ref.tag):
-                    l2_cache.set_block(
+                if l2_cache and l2_cache.is_hit(ref.index, ref.tag):
+                    # L2 캐시에서 히트한 경우
+                    ref.cache_status = ReferenceCacheStatus.hit
+                    # L2 캐시에서 블록을 가져와 L1 캐시에 추가
+                    l2_block = l2_cache.get_block(ref.index, ref.tag)
+                    self.set_block(
                         replacement_policy=replacement_policy,
                         num_blocks_per_set=num_blocks_per_set,
                         addr_index=ref.index,
-                        new_entry=ref.get_cache_entry(num_words_per_block),
+                        new_entry=l2_block,
+                        l2_cache=None,
+                    )
+                    # L2 캐시에서 해당 블록 제거 (L1으로 이동)
+                    l2_cache.remove_block(ref.index, ref.tag)
+                else:
+                    # L2 캐시에서도 미스인 경우
+                    ref.cache_status = ReferenceCacheStatus.miss
+                    # 메인 메모리에서 블록을 가져와 L1 및 L2 캐시에 추가
+                    new_entry = ref.get_cache_entry(num_words_per_block)
+                    if l2_cache:
+                        l2_cache.set_block(
+                            replacement_policy=replacement_policy,
+                            num_blocks_per_set=num_blocks_per_set,
+                            addr_index=ref.index,
+                            new_entry=new_entry,
+                            l2_cache=None,  # 재귀 방지
+                        )
+                    self.set_block(
+                        replacement_policy=replacement_policy,
+                        num_blocks_per_set=num_blocks_per_set,
+                        addr_index=ref.index,
+                        new_entry=new_entry,
+                        l2_cache=l2_cache,
                     )
 
     # Add a method to retrieve a block from the cache
@@ -117,5 +144,14 @@ class Cache(dict):
                 if block["tag"] == addr_tag:
                     return block
         return None
+
+    # Add a method to remove a block from the cache
+    def remove_block(self, addr_index, addr_tag):
+        if addr_index in self:
+            blocks = self[addr_index]
+            for i, block in enumerate(blocks):
+                if block["tag"] == addr_tag:
+                    del blocks[i]
+                    return
 
 

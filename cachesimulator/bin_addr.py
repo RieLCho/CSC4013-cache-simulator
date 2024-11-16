@@ -30,24 +30,16 @@ class BinaryAddress(str):
 
     # Retrieves the tag used to distinguish cache entries with the same index
     def get_tag(self, num_tag_bits):
-
         end = num_tag_bits
         tag = self[:end]
-        if len(tag) != 0:
-            return tag
-        else:
-            return None
+        return tag if tag else "0" * num_tag_bits
 
     # Retrieves the index used to group blocks in the cache
     def get_index(self, num_offset_bits, num_index_bits):
-
         start = len(self) - num_offset_bits - num_index_bits
         end = len(self) - num_offset_bits
         index = self[start:end]
-        if len(index) != 0:
-            return index
-        else:
-            return None
+        return index if index else "0" * num_index_bits
 
     # Retrieves the word offset used to select a word in the data pointed to by
     # the given binary address
@@ -55,7 +47,4 @@ class BinaryAddress(str):
 
         start = len(self) - num_offset_bits
         offset = self[start:]
-        if len(offset) != 0:
-            return offset
-        else:
-            return None
+        return offset if offset else "0" * num_offset_bits
